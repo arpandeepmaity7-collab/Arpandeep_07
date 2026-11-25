@@ -1,0 +1,17 @@
+<resources>
+    <string name="app_name">Folio Tasks</string>
+    <string name="sign_in_with_google">Sign in with Google</string>
+    <string name="sign_out">Sign out</string>
+    <string name="auth_headline">Quiet focus for every day’s work.</string>
+    <string name="auth_subhead">Organize tasks with due dates, priority tiers, nested subtasks, and real-time cloud sync across your devices.</string>
+    <string name="new_task">New Task</string>
+    <string name="edit_task">Edit Task</string>
+    <string name="task_title_label">Task title</string>
+    <string name="task_notes_label">Notes</string>
+    <string name="save_task">Save Task</string>
+    <string name="manage_tags">Manage Tags</string>
+    <string name="search_tasks_hint">Search tasks or notes…</string>
+    <string name="reminder_channel_name">Task Reminders</string>
+    <string name="reminder_channel_description">Notifications for upcoming task due dates and reminders</string>
+    <string name="notification_permission_rationale">Enable notifications to receive due-date reminders on time.</string>
+</resources>

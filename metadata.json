@@ -1,0 +1,6 @@
+{
+  "name": "Folio Tasks",
+  "description": "An editorial paper-styled task planner and progress tracker with due dates, priority levels, subtasks, custom tags, and Google Sign-In cloud sync.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

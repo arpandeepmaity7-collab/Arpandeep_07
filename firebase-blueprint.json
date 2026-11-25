@@ -1,0 +1,120 @@
+{
+  "entities": {
+    "TaskItem": {
+      "title": "TaskItem",
+      "description": "A user task with priority level, optional due date, optional reminder timestamp, optional category tag, and bounded subtask checklist.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Authenticated owner UID matching the parent user document."
+        },
+        "title": {
+          "type": "string",
+          "description": "Concise task title (1 to 120 characters)."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional detailed notes (up to 1000 characters)."
+        },
+        "completed": {
+          "type": "boolean",
+          "description": "Whether the task is marked complete."
+        },
+        "priority": {
+          "type": "string",
+          "enum": ["HIGH", "MEDIUM", "LOW"],
+          "description": "Task priority tier."
+        },
+        "dueAtMillis": {
+          "type": "integer",
+          "description": "Optional due date timestamp in UTC epoch milliseconds."
+        },
+        "reminderAtMillis": {
+          "type": "integer",
+          "description": "Optional local reminder timestamp in UTC epoch milliseconds."
+        },
+        "reminderEnabled": {
+          "type": "boolean",
+          "description": "Whether due-date reminder notification is active."
+        },
+        "categoryId": {
+          "type": "string",
+          "description": "Optional ID referencing a CategoryTag document under /users/{userId}/categories."
+        },
+        "subtasks": {
+          "type": "array",
+          "description": "Bounded list (max 30) of subtask objects containing id, title, and completed."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp set via FieldValue.serverTimestamp() on creation."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp set via FieldValue.serverTimestamp() on every write."
+        }
+      },
+      "required": [
+        "userId",
+        "title",
+        "notes",
+        "completed",
+        "priority",
+        "reminderEnabled",
+        "subtasks",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "CategoryTag": {
+      "title": "CategoryTag",
+      "description": "A custom user-defined project or category tag for organizing tasks.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Authenticated owner UID matching the parent user document."
+        },
+        "name": {
+          "type": "string",
+          "description": "Tag label (1 to 30 characters)."
+        },
+        "tone": {
+          "type": "string",
+          "enum": ["terracotta", "ochre", "sage", "indigo", "plum", "charcoal"],
+          "description": "Editorial ink tone identifier for the tag pill."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp set via FieldValue.serverTimestamp() on creation."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp set via FieldValue.serverTimestamp() on every write."
+        }
+      },
+      "required": [
+        "userId",
+        "name",
+        "tone",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/tasks/{taskId}": {
+      "schema": { "$ref": "#/entities/TaskItem" },
+      "description": "User-owned tasks with priority, due date, reminders, tags, and subtasks."
+    },
+    "/users/{userId}/categories/{categoryId}": {
+      "schema": { "$ref": "#/entities/CategoryTag" },
+      "description": "User-owned custom project category tags."
+    }
+  }
+}

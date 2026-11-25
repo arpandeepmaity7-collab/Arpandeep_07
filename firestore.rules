@@ -1,0 +1,129 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidSubtaskEntry(item) {
+      return item is map &&
+             item.keys().hasAll(['id', 'title', 'completed']) &&
+             item.keys().hasOnly(['id', 'title', 'completed']) &&
+             isValidId(item.id) &&
+             item.title is string && item.title.size() >= 1 && item.title.size() <= 120 &&
+             item.completed is bool;
+    }
+
+    function isValidTask(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 120 &&
+             data.notes is string && data.notes.size() <= 1000 &&
+             data.completed is bool &&
+             data.priority is string && data.priority in ['HIGH', 'MEDIUM', 'LOW'] &&
+             (!('dueAtMillis' in data) || (data.dueAtMillis is int && data.dueAtMillis >= 0)) &&
+             (!('reminderAtMillis' in data) || (data.reminderAtMillis is int && data.reminderAtMillis >= 0)) &&
+             data.reminderEnabled is bool &&
+             (!('categoryId' in data) || isValidId(data.categoryId)) &&
+             data.subtasks is list && data.subtasks.size() <= 30 &&
+             (data.subtasks.size() == 0 || isValidSubtaskEntry(data.subtasks[0])) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidCategory(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 30 &&
+             data.tone is string && data.tone in ['terracotta', 'ochre', 'sage', 'indigo', 'plum', 'charcoal'] &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    match /users/{userId}/tasks/{taskId} {
+      allow list: if isOwner(userId);
+      allow get: if isOwner(userId) && isValidId(taskId);
+
+      allow create: if isOwner(userId) &&
+                       isValidId(taskId) &&
+                       incoming().keys().hasAll([
+                         'userId', 'title', 'notes', 'completed',
+                         'priority', 'reminderEnabled', 'subtasks',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'title', 'notes', 'completed',
+                         'priority', 'dueAtMillis', 'reminderAtMillis',
+                         'reminderEnabled', 'categoryId', 'subtasks',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidTask(incoming(), userId) &&
+                       (!('categoryId' in incoming()) ||
+                         exists(/databases/$(database)/documents/users/$(userId)/categories/$(incoming().categoryId)));
+
+      allow update: if isOwner(userId) &&
+                       isValidId(taskId) &&
+                       isValidTask(incoming(), userId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       (
+                         // Action: Toggle completion / reminder state
+                         incoming().diff(existing()).affectedKeys().hasOnly(['completed', 'reminderEnabled', 'updatedAt']) ||
+                         // Action: Update subtasks checklist
+                         incoming().diff(existing()).affectedKeys().hasOnly(['subtasks', 'updatedAt']) ||
+                         // Action: Edit full task fields
+                         (
+                           incoming().diff(existing()).affectedKeys().hasOnly([
+                             'title', 'notes', 'completed', 'priority',
+                             'dueAtMillis', 'reminderAtMillis', 'reminderEnabled',
+                             'categoryId', 'subtasks', 'updatedAt'
+                           ]) &&
+                           (!('categoryId' in incoming()) ||
+                             (('categoryId' in existing()) && incoming().categoryId == existing().categoryId) ||
+                             exists(/databases/$(database)/documents/users/$(userId)/categories/$(incoming().categoryId)))
+                         )
+                       );
+
+      allow delete: if isOwner(userId) && isValidId(taskId);
+    }
+
+    match /users/{userId}/categories/{categoryId} {
+      allow list: if isOwner(userId);
+      allow get: if isOwner(userId) && isValidId(categoryId);
+
+      allow create: if isOwner(userId) &&
+                       isValidId(categoryId) &&
+                       incoming().keys().hasAll(['userId', 'name', 'tone', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['userId', 'name', 'tone', 'createdAt', 'updatedAt']) &&
+                       isValidCategory(incoming(), userId);
+
+      allow update: if isOwner(userId) &&
+                       isValidId(categoryId) &&
+                       isValidCategory(incoming(), userId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['name', 'tone', 'updatedAt']);
+
+      allow delete: if isOwner(userId) && isValidId(categoryId);
+    }
+  }
+}
